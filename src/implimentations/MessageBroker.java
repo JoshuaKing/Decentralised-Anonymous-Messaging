@@ -13,7 +13,7 @@ public class MessageBroker {
 		// nothing.
 	}
 	
-	public static IMessage newTextMessage(RSAPublicKey key, String to, String from, String message) {
+	public static IMessage assembleMessage(RSAPublicKey key, String to, String from, String message) {
 		LinkedHashMap<String, String> map = new LinkedHashMap<String, String>();
 		map.put("Protocol", "Text-Message");
 		map.put("To", to);

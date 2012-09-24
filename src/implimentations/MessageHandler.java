@@ -1,26 +1,23 @@
 package implimentations;
 
 import interfaces.IMessage;
-import interfaces.IMessageHandler;
 
 import java.security.interfaces.RSAPrivateKey;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map.Entry;
 
-public class MessageHandler implements IMessageHandler {
+public class MessageHandler {
 	RSAPrivateKey priv;
 	
 	public MessageHandler(RSAPrivateKey key) {
 		priv = key;
 	}
 	
-	@Override
 	public void setPrivateKey(RSAPrivateKey key) {
 		priv = key;
 	}
-
-	@Override
+	
 	public void decrypt(IMessage message) {
 		LinkedHashMap<String, String> map;
 		try {

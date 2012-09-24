@@ -1,26 +1,110 @@
 package implimentations;
 
 import interfaces.IMessage;
-import interfaces.IMessageHandler;
 import interfaces.IReceiver;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.net.URL;
+import java.net.URLConnection;
+import java.rmi.RMISecurityManager;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.RemoteServer;
+import java.rmi.server.UnicastRemoteObject;
 import java.security.InvalidParameterException;
+import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.util.ArrayList;
 import java.util.HashMap;
 
 public class Receiver implements IReceiver {
+	private static final int PORT = 1099;
+	private static String peerListUrl = "http://vierware.com/test/peerlist.txt";
 	
 	private ArrayList<IReceiver> peerList;
 	private ArrayList<String> peerHostNames;
 	private ArrayList<Integer> cache;
-	private IMessageHandler messageHandler;
+	private MessageHandler messageHandler;
+	private static RsaKeyPair rkp;
+	private static IReceiver stub;
+	private static Receiver instance = null;
 	
-	public Receiver(IMessageHandler mh) {
+	public static ArrayList<String> getPeerList(String url) {
+		ArrayList<String> peers = new ArrayList<String>();
+		URLConnection conn;
+		try {
+			conn = (new URL(url)).openConnection();
+
+			BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+			String inputLine;
+			
+			while ((inputLine = in.readLine()) != null) 
+				peers.add(inputLine);
+			in.close();
+		} catch (Exception e) {
+			return peers;
+		}
+		
+		return peers;
+	}
+	
+	public static Receiver startServer(String[] args) {
+		if (instance != null)
+			return instance;
+		
+		System.out.println("DEBUG: Creating Server.");
+		
+		// Get the RSA Keys for messaging //
+		rkp = RsaKeyHandler.getKeys();
+		instance = new Receiver(new MessageHandler(rkp.getPrivate()));
+		
+		try {
+			
+			// Create a stub of the server //
+			stub = (IReceiver) UnicastRemoteObject.exportObject(instance, PORT);
+			
+			// Get the RMI registry
+			Registry registry = null;
+			try {
+				registry = LocateRegistry.createRegistry(PORT);
+			} catch (RemoteException e) {
+				registry = LocateRegistry.getRegistry();
+			}
+			
+			// Host the stub on the registry, on the specified port
+			registry.bind("Receiver", stub);
+			System.out.println("DEBUG: Server Bound.");
+			
+			// Testing purposes only:
+			System.out.println("DEBUG: Generating Local Client.");
+			System.setSecurityManager(new RMISecurityManager());
+			if (args.length > 0) {
+				ArrayList<String> peers = new ArrayList<String>();
+				for (String s : args) {
+					peers.add(s);
+				}
+				instance.connectTo(peers);
+			} else {
+				instance.connectTo(getPeerList(peerListUrl));	// Get list of newline-seperated IP's of other peers
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return instance;				
+	}
+	
+	public void sendMessage(String from, String to, String message) {
+		IMessage m = MessageBroker.assembleMessage(rkp.getPublic(), to, from, message);
+		try {
+			stub.propagate(m);
+		} catch (RemoteException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	public Receiver(MessageHandler mh) {
 		if (mh == null)
 			throw new InvalidParameterException("Message Handler cannot be null.");
 		
@@ -33,7 +117,7 @@ public class Receiver implements IReceiver {
 	@Override
 	public void propagate(IMessage message) throws RemoteException {
 		try {
-			// Check if message is in cache and has already been propogated before.
+			// Check if message is in cache and has already been propagated before.
 			if (cache.contains(message.getIdentifier())) {
 				System.out.println("Duplicate message received.");
 				return;
