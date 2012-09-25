@@ -1,8 +1,11 @@
 package gui;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.util.ArrayList;
 
+import implimentations.FriendsHandler;
 import implimentations.Receiver;
+import interfaces.IMessage;
 
 import javax.swing.DefaultComboBoxModel;
 import javax.swing.GroupLayout;
@@ -10,6 +13,7 @@ import javax.swing.JButton;
 import javax.swing.JComponent;
 import javax.swing.JFrame;
 import javax.swing.JList;
+import javax.swing.JOptionPane;
 import javax.swing.JTextField;
 import javax.swing.ListModel;
 
@@ -24,7 +28,11 @@ public class Interface extends JFrame {
 	private JList lstIdentities, lstMessages, lstFriends;
 	private JTextField txtMessage;
 	private static Receiver server;
+	private static FriendsHandler friendHandler;
+	private ArrayList<IMessage> messages;
+	private static final String alias;
 	
+	// TODO: remove this class...
 	private class ListSelectListener implements ListSelectionListener {
 		@Override
 		public void valueChanged(ListSelectionEvent e) {
@@ -46,8 +54,7 @@ public class Interface extends JFrame {
 		}
 
 		private void selectFriend() {
-			String friend = lstFriends.getSelectedValue().toString();
-			
+			return; // I don't believe this is needed
 		}
 	}
 	
@@ -57,24 +64,30 @@ public class Interface extends JFrame {
 		public void actionPerformed(ActionEvent arg0) {
 			// Send Message //
 			String message = txtMessage.getText();
-			
+			int friend = lstFriends.getSelectedIndex();
+			server.sendMessage(alias, friendHandler.get(friend), message);
 		}
 	}
 	
-	public static void main(String[] args) {
-		server = Receiver.startServer(args);
+	public static void main(String[] args) {	
+		final String[] args2 = args;
+		friendHandler = new FriendsHandler();
+		
+		alias = JOptionPane.showInputDialog(null, "Please enter alias.");
 		
 		SwingUtilities.invokeLater(new Runnable() {
 			public void run() {
-				Interface inst = new Interface();
+				Interface inst = new Interface(args2);
 				inst.setLocationRelativeTo(null);
 				inst.setVisible(true);
 			}
 		});
 	}
 	
-	public Interface() {
+	public Interface(String[] args) {
 		super("Decentralised Messaging");
+		messages = new ArrayList<IMessage>();
+		server = Receiver.startServer(this, args);
 		initGUI();
 	}
 	
@@ -105,7 +118,11 @@ public class Interface extends JFrame {
 			lstMessages.setModel(lstMessagesModel);
 			
 			// Add friend identities //
-			ListModel lstFriendsModel = new DefaultComboBoxModel(new String[] { "Alice", "Eve" });
+			String[] friends = new String[friendHandler.getFriends().size()];
+			for (int i = 0; i < friends.length; i++) {
+				friends[i] = friendHandler.get(i).toString();
+			}
+			ListModel lstFriendsModel = new DefaultComboBoxModel(friends);
 			lstFriends = new JList();
 			lstFriends.addListSelectionListener(listListener);
 			lstFriends.setModel(lstFriendsModel);
@@ -148,6 +165,17 @@ public class Interface extends JFrame {
 		    //add your error handling code here
 			e.printStackTrace();
 		}
+	}
+
+	public void newMessage(IMessage message) {
+		messages.add(message);
+		
+		// Add new message to UI //
+		String[] messageModel = new String[messages.size()];
+		for (int i = 0; i < messageModel.length; i++) {
+			messageModel[i] = messages.get(i).toString();
+		}
+		lstMessages.setModel(new DefaultComboBoxModel(messageModel));
 	}
 
 }

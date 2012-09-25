@@ -1,5 +1,6 @@
 package implimentations;
 
+import gui.Interface;
 import interfaces.IMessage;
 import interfaces.IReceiver;
 
@@ -20,22 +21,23 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 public class Receiver implements IReceiver {
+	private static final int CACHE_SIZE = 100;
 	private static final int PORT = 1099;
 	private static String peerListUrl = "http://vierware.com/test/peerlist.txt";
 	
-	private ArrayList<IReceiver> peerList;
-	private ArrayList<String> peerHostNames;
-	private ArrayList<Integer> cache;
-	private MessageHandler messageHandler;
+	private static Interface ui;
+	private static ArrayList<IReceiver> peerList;
+	private static ArrayList<String> peerHostNames;
+	private static ArrayList<Integer> cache;
+	private static MessageHandler messageHandler;
 	private static RsaKeyPair rkp;
 	private static IReceiver stub;
 	private static Receiver instance = null;
 	
 	public static ArrayList<String> getPeerList(String url) {
 		ArrayList<String> peers = new ArrayList<String>();
-		URLConnection conn;
 		try {
-			conn = (new URL(url)).openConnection();
+			URLConnection conn = (new URL(url)).openConnection();
 
 			BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream()));
 			String inputLine;
@@ -50,9 +52,13 @@ public class Receiver implements IReceiver {
 		return peers;
 	}
 	
-	public static Receiver startServer(String[] args) {
+	public static Receiver startServer(Interface gui, String[] args) {
 		if (instance != null)
 			return instance;
+		
+		// Remember the user interface for updating later //
+		ui = gui;
+		
 		
 		System.out.println("DEBUG: Creating Server.");
 		
@@ -77,8 +83,8 @@ public class Receiver implements IReceiver {
 			registry.bind("Receiver", stub);
 			System.out.println("DEBUG: Server Bound.");
 			
-			// Testing purposes only:
-			System.out.println("DEBUG: Generating Local Client.");
+			// Connect to peers //
+			System.out.println("DEBUG: Connecting to Clients.");
 			System.setSecurityManager(new RMISecurityManager());
 			if (args.length > 0) {
 				ArrayList<String> peers = new ArrayList<String>();
@@ -119,7 +125,7 @@ public class Receiver implements IReceiver {
 		try {
 			// Check if message is in cache and has already been propagated before.
 			if (cache.contains(message.getIdentifier())) {
-				System.out.println("Duplicate message received.");
+				System.out.println("DEBUG: Message has come back again - discarding.");
 				return;
 			}
 			
@@ -127,7 +133,7 @@ public class Receiver implements IReceiver {
 			cache.add(message.getIdentifier());
 			
 			// Make sure cache size is limited
-			while (cache.size() > 100)
+			while (cache.size() > CACHE_SIZE)
 				cache.remove(0);
 			
 			// Propagate message to all connected hosts
@@ -141,10 +147,13 @@ public class Receiver implements IReceiver {
 			}
 			
 			// Decrypt the message - it might be ours!
-			System.out.println("Just received a message; Decrypting.");
-			messageHandler.decrypt(message);
+			System.out.println("DEBUG: Just received a message; Decrypting.");
+			if (messageHandler.decrypt(message)) {
+				// Message is to us //
+				ui.newMessage(message);
+			}
 		} catch (Exception e) {
-			System.out.println("Decryption Failed: " + e.getMessage());
+			System.out.println("DEBUG: Decryption Failed: " + e.getMessage());
 		}
 	}
 	
@@ -154,11 +163,11 @@ public class Receiver implements IReceiver {
 			IReceiver node = (IReceiver) registry.lookup("Receiver");
 			peerList.add(node);
 			peerHostNames.add(host);
-			System.out.println("Node at " + host + " now part of peer list.");
+			System.out.println("DEBUG: Node at " + host + " now part of peer list.");
 			node.connect();
 			return true;
 		} catch (Exception e) {
-			System.out.println("Failed to connect to node at " + host);
+			System.out.println("DEBUG: Failed to connect to node at " + host);
 			return false;
 		}
 	}
