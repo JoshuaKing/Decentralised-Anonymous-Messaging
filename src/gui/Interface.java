@@ -30,7 +30,7 @@ public class Interface extends JFrame {
 	private static Receiver server;
 	private static FriendsHandler friendHandler;
 	private ArrayList<IMessage> messages;
-	private static final String alias;
+	private static String alias;
 	
 	// TODO: remove this class...
 	private class ListSelectListener implements ListSelectionListener {
