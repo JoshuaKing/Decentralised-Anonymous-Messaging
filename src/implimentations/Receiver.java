@@ -1,7 +1,9 @@
 package implimentations;
 
 import gui.Interface;
-import implimentations.FriendsHandler.Friend;
+import handlers.MessageHandler;
+import handlers.RsaKeyHandler;
+import handlers.FriendsHandler.Friend;
 import interfaces.IMessage;
 import interfaces.IReceiver;
 
@@ -103,7 +105,7 @@ public class Receiver implements IReceiver {
 	}
 	
 	public void sendMessage(String from, Friend friend, String message) {
-		IMessage m = MessageBroker.assembleMessage(rkp.getPublic(), friend.name, from, message);
+		IMessage m = SimpleMessage.createMessage(rkp.getPublic(), friend.name, from, message);
 		try {
 			stub.propagate(m);
 		} catch (RemoteException e) {

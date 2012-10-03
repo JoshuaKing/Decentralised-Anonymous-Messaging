@@ -3,7 +3,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.ArrayList;
 
-import implimentations.FriendsHandler;
+import handlers.FriendsHandler;
 import implimentations.Receiver;
 import interfaces.IMessage;
 
@@ -28,7 +28,6 @@ public class Interface extends JFrame {
 	private JList lstIdentities, lstMessages, lstFriends;
 	private JTextField txtMessage;
 	private static Receiver server;
-	private static FriendsHandler friendHandler;
 	private ArrayList<IMessage> messages;
 	private static String alias;
 	
@@ -64,14 +63,14 @@ public class Interface extends JFrame {
 		public void actionPerformed(ActionEvent arg0) {
 			// Send Message //
 			String message = txtMessage.getText();
-			int friend = lstFriends.getSelectedIndex();
-			server.sendMessage(alias, friendHandler.get(friend), message);
+			int friendid = lstFriends.getSelectedIndex();
+			server.sendMessage(alias, FriendsHandler.get(friendid), message);
 		}
 	}
 	
 	public static void main(String[] args) {	
 		final String[] args2 = args;
-		friendHandler = new FriendsHandler();
+		FriendsHandler.loadFriends();
 		
 		alias = JOptionPane.showInputDialog(null, "Please enter alias.");
 		
@@ -118,9 +117,9 @@ public class Interface extends JFrame {
 			lstMessages.setModel(lstMessagesModel);
 			
 			// Add friend identities //
-			String[] friends = new String[friendHandler.getFriends().size()];
+			String[] friends = new String[FriendsHandler.getFriends().size()];
 			for (int i = 0; i < friends.length; i++) {
-				friends[i] = friendHandler.get(i).toString();
+				friends[i] = FriendsHandler.get(i).toString();
 			}
 			ListModel lstFriendsModel = new DefaultComboBoxModel(friends);
 			lstFriends = new JList();
@@ -133,7 +132,7 @@ public class Interface extends JFrame {
 			// Add 'send' button to send message //
 			btnSend = new JButton();
 			btnSend.setText("Send");
-			
+			btnSend.addActionListener(new SendListener());
 
 			layout.setHorizontalGroup(layout.createParallelGroup()
 					.addGroup(layout.createSequentialGroup()
