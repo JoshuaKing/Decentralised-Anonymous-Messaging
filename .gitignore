@@ -158,3 +158,27 @@ pip-log.txt
 .DS_Store
 
 *.class
+
+bin/implimentations/Propogate.class
+
+bin/implimentations/Receiver.class
+
+bin/implimentations/SimpleMessage$AsymmetricEncryptionType.class
+
+bin/implimentations/SimpleMessage.class
+
+bin/interfaces/IReceiver.class
+
+bin/handlers/RsaKeyHandler.class
+
+bin/handlers/MessageHandler.class
+
+bin/handlers/FriendsHandler.class
+
+bin/handlers/FriendsHandler$Friend.class
+
+bin/gui/Interface.class
+
+bin/gui/Interface$SendListener.class
+
+bin/gui/Interface$1.class
