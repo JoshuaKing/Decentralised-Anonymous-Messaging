@@ -73,7 +73,7 @@ public class RsaKeyHandler {
 		}
 	}
 	
-	private static RSAPublicKey readPublicFromFile(String path, KeyFactory fact) {
+	public static RSAPublicKey readPublicFromFile(String path, KeyFactory fact) {
 		try {
 			ObjectInputStream oin = new ObjectInputStream(new FileInputStream(path));
 			BigInteger mod = (BigInteger) oin.readObject();

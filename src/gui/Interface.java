@@ -5,8 +5,6 @@ import java.util.ArrayList;
 
 import handlers.FriendsHandler;
 import implimentations.Receiver;
-import interfaces.IMessage;
-
 import javax.swing.DefaultComboBoxModel;
 import javax.swing.GroupLayout;
 import javax.swing.JButton;
@@ -18,44 +16,16 @@ import javax.swing.JTextField;
 import javax.swing.ListModel;
 
 import javax.swing.WindowConstants;
-import javax.swing.event.ListSelectionEvent;
-import javax.swing.event.ListSelectionListener;
 import javax.swing.SwingUtilities;
 
 public class Interface extends JFrame {
 	private static final long serialVersionUID = 1L;
 	private JButton btnSend;
-	private JList lstIdentities, lstMessages, lstFriends;
+	private JList lstMessages, lstFriends;
 	private JTextField txtMessage;
 	private static Receiver server;
-	private ArrayList<IMessage> messages;
+	private ArrayList<String> messages;
 	private static String alias;
-	
-	// TODO: remove this class...
-	private class ListSelectListener implements ListSelectionListener {
-		@Override
-		public void valueChanged(ListSelectionEvent e) {
-			if (e.getSource() == lstIdentities) {
-				selectIdentity();
-			} else if (e.getSource() == lstMessages) {
-				selectMessage();
-			} else if (e.getSource() == lstFriends) {
-				selectFriend();
-			}
-		}
-		
-		private void selectIdentity() {
-			return;	// Not implemented yet
-		}
-
-		private void selectMessage() {
-			return;	// Not implemented yet
-		}
-
-		private void selectFriend() {
-			return; // I don't believe this is needed
-		}
-	}
 	
 	private class SendListener implements ActionListener {
 
@@ -64,6 +34,8 @@ public class Interface extends JFrame {
 			// Send Message //
 			String message = txtMessage.getText();
 			int friendid = lstFriends.getSelectedIndex();
+			if (friendid == -1)
+				return;
 			server.sendMessage(alias, FriendsHandler.get(friendid), message);
 		}
 	}
@@ -73,7 +45,7 @@ public class Interface extends JFrame {
 		FriendsHandler.loadFriends();
 		
 		alias = JOptionPane.showInputDialog(null, "Please enter alias.");
-		
+		System.out.println("DEBUG: Welcome, " + alias);
 		SwingUtilities.invokeLater(new Runnable() {
 			public void run() {
 				Interface inst = new Interface(args2);
@@ -84,8 +56,8 @@ public class Interface extends JFrame {
 	}
 	
 	public Interface(String[] args) {
-		super("Decentralised Messaging");
-		messages = new ArrayList<IMessage>();
+		super("Decentralised Messaging - " + alias);
+		messages = new ArrayList<String>();
 		server = Receiver.startServer(this, args);
 		initGUI();
 	}
@@ -100,20 +72,10 @@ public class Interface extends JFrame {
 			
 			// Set close operation //
 			setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
-			
-			// Create list selection listener //
-			ListSelectListener listListener = new ListSelectListener();
-			
-			// Add user identities //
-			ListModel lstIdentitiesModel = new DefaultComboBoxModel(new String[] { "Bob 1", "Bob 2" });
-			lstIdentities = new JList();
-			lstIdentities.addListSelectionListener(listListener);
-			lstIdentities.setModel(lstIdentitiesModel);
 
 			// Add list of messages to user //
 			ListModel lstMessagesModel = new DefaultComboBoxModel(new String[] { "From Alice: Hi", "From Eve: Bye" });
 			lstMessages = new JList();
-			lstMessages.addListSelectionListener(listListener);
 			lstMessages.setModel(lstMessagesModel);
 			
 			// Add friend identities //
@@ -123,7 +85,6 @@ public class Interface extends JFrame {
 			}
 			ListModel lstFriendsModel = new DefaultComboBoxModel(friends);
 			lstFriends = new JList();
-			lstFriends.addListSelectionListener(listListener);
 			lstFriends.setModel(lstFriendsModel);
 			
 			// Add text field for sending a message //
@@ -136,7 +97,6 @@ public class Interface extends JFrame {
 
 			layout.setHorizontalGroup(layout.createParallelGroup()
 					.addGroup(layout.createSequentialGroup()
-							.addComponent(lstIdentities, 200, GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
 							.addComponent(lstMessages, 500, GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
 							.addComponent(lstFriends, 200, GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
 					)
@@ -148,7 +108,6 @@ public class Interface extends JFrame {
 			
 			layout.setVerticalGroup(layout.createSequentialGroup()
 					.addGroup(layout.createParallelGroup()
-							.addComponent(lstIdentities, 500, GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
 							.addComponent(lstMessages, 500, GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
 							.addComponent(lstFriends, 500, GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
 					)
@@ -166,13 +125,13 @@ public class Interface extends JFrame {
 		}
 	}
 
-	public void newMessage(IMessage message) {
+	public void newMessage(String message) {
 		messages.add(message);
 		
 		// Add new message to UI //
 		String[] messageModel = new String[messages.size()];
 		for (int i = 0; i < messageModel.length; i++) {
-			messageModel[i] = messages.get(i).toString();
+			messageModel[i] = messages.get(i);
 		}
 		lstMessages.setModel(new DefaultComboBoxModel(messageModel));
 	}

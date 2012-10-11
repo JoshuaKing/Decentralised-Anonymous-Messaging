@@ -12,7 +12,7 @@ import java.security.spec.RSAPublicKeySpec;
 import java.util.ArrayList;
 
 public class FriendsHandler {
-	private static final String keydir = System.getProperty("user.home") + File.separator + ".p2pkeys" + File.separator;
+	private static final String keydir = System.getProperty("user.home") + File.separator + ".p2pkeys" + File.separator + "friends" + File.separator;
 	private static ArrayList<Friend> friends = new ArrayList<Friend>();
 	private static ArrayList<Friend> newFriends = new ArrayList<Friend>();
 	
@@ -30,6 +30,11 @@ public class FriendsHandler {
 			pub = (RSAPublicKey) fact.generatePublic(keySpec);
 		}
 		
+		public Friend(String n, RSAPublicKey pk) {
+			pub = pk;
+			name = n;
+		}
+
 		@Override
 		public String toString() {
 			return name + "[" + pub.toString().substring(0, 5) + "...]";
@@ -41,25 +46,19 @@ public class FriendsHandler {
 	}
 	
 	public static void loadFriends() {
-		File f = new File(keydir + "friends.keys");
-		if (!f.exists()) {
+		File dir = new File(keydir);
+		if (!dir.exists() || !dir.isDirectory()) {
 			return;
 		}
 		
 		try {
-			BufferedReader in = new BufferedReader(new FileReader(f));
-			while (true) {
-				String name = in.readLine();
-				if (name == null) break;
-				
-				String modula = in.readLine();
-				if (modula == null) break;
-				
-				String exponent = in.readLine();
-				if (exponent == null) break;
+			for (File f : dir.listFiles()) {
+				String name = f.getName().split("[.]", 1)[0];
+				RSAPublicKey pk = RsaKeyHandler.readPublicFromFile(f.getAbsolutePath(), KeyFactory.getInstance("RSA"));
 				
 				try {
-					friends.add(new Friend(name, modula, exponent));
+					friends.add(new Friend(name, pk));
+					System.out.println("DEBUG: User " + name + " key found.");
 				} catch (Exception e) {
 					System.err.println("DEBUG: Could not create key for " + name);
 					break;
@@ -91,6 +90,8 @@ public class FriendsHandler {
 	}
 	
 	public static Friend get(int index) {
+		if (index >= friends.size() || index < 0)
+			System.err.println("DEBUG: Index " + index + " is not valid for Friends.");
 		return friends.get(index);
 	}
 

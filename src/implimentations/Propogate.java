@@ -2,14 +2,13 @@ package implimentations;
 
 import java.rmi.RemoteException;
 
-import interfaces.IMessage;
 import interfaces.IReceiver;
 
 public class Propogate implements Runnable {
 	IReceiver server;
-	IMessage message;
+	SimpleMessage message;
 	
-	public Propogate(IReceiver rec, IMessage msg) {
+	public Propogate(IReceiver rec, SimpleMessage msg) {
 		server = rec;
 		message = msg;
 	}

@@ -1,8 +1,7 @@
 package implimentations;
 
-import interfaces.IMessage;
-
 import java.io.IOException;
+import java.io.Serializable;
 import java.security.InvalidKeyException;
 import java.security.InvalidParameterException;
 import java.security.MessageDigest;
@@ -16,15 +15,13 @@ import java.util.Map.Entry;
 import java.util.Random;
 
 import javax.crypto.Cipher;
-import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.KeyGenerator;
-import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SealedObject;
 import javax.crypto.SecretKey;
 
 import tools.Hex;
 
-public class SimpleMessage implements IMessage {
+public class SimpleMessage implements Serializable {
 	private static final long serialVersionUID = -5746917610976873331L;
 	private SealedObject contents, secretKey;
 	private final int id;
@@ -55,25 +52,15 @@ public class SimpleMessage implements IMessage {
 			if (aet.equals(AsymmetricEncryptionType.RSA))
 				c = Cipher.getInstance("RSA");
 			else
-				throw new UnsupportedOperationException("Unsupported Assymentric Encryption Type.");
+				throw new UnsupportedOperationException("Unsupported Asymentric Encryption Type.");
 			
 			c.init(Cipher.ENCRYPT_MODE, key);
 			secretKey = new SealedObject(secret, c);
-			System.out.println("Message Securely Encrypted.");
-		} catch (NoSuchAlgorithmException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (NoSuchPaddingException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (IllegalBlockSizeException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (InvalidKeyException e) {
-			// TODO Auto-generated catch block
+			System.out.println("DEBUG: Message Securely Encrypted.");
+		} catch (UnsupportedOperationException e) {
+			// We don't want to catch this particular one - rethrow //
+			throw e;
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	}
@@ -92,7 +79,7 @@ public class SimpleMessage implements IMessage {
 		return str;
 	}
 	
-	public static IMessage createMessage(RSAPublicKey key, String to, String from, String message) {
+	public static SimpleMessage createMessage(RSAPublicKey key, String to, String from, String message) {
 		LinkedHashMap<String, String> map = new LinkedHashMap<String, String>();
 		map.put("Protocol", "Text-Message");
 		map.put("To", to);
@@ -102,21 +89,32 @@ public class SimpleMessage implements IMessage {
 		map.put("Message", message);
 		return new SimpleMessage(key, SimpleMessage.AsymmetricEncryptionType.RSA, map);
 	}
-
-	@Override
-	public LinkedHashMap<String, String> getMap(PrivateKey key) throws Exception {
-		// Decrypt secret key
-		SecretKey secret = (SecretKey) secretKey.getObject(key);
-		
-		// Decrypt contents with secret key
-		LinkedHashMap<String, String> map = (LinkedHashMap<String, String>) contents.getObject(secret);
-		
-		// Validate the hash - Check it has not been tampered with.
-		if (validateHash(map))
-			return map;
-		
-		System.out.println("Message has been tampered with!");
-		return new LinkedHashMap<String, String>();
+	
+	public static String niceMessage(LinkedHashMap<String, String> map) {
+		String s = "";
+		int x = map.get("From-RSA-Mod").hashCode() + map.get("From-RSA-Exp").hashCode();
+		s += "From: " + map.get("From") + " [" + x + "]\n";
+		s += "Message: " + map.get("Message");
+		return s;
+	}
+	
+	public LinkedHashMap<String, String> getMap(PrivateKey key) {		
+		try {
+			// Decrypt secret key
+			SecretKey secret = (SecretKey) secretKey.getObject(key);
+			
+			// Decrypt contents with secret key
+			LinkedHashMap<String, String> map = (LinkedHashMap<String, String>) contents.getObject(secret);
+			
+			// Validate the hash - Check it has not been tampered with.
+			if (validateHash(map))
+				return map;
+			
+			System.out.println("DEBUG: Message has been tampered with!");
+			return null;
+		} catch (Exception e) {
+			return null;
+		}
 	}
 
 	private boolean validateHash(LinkedHashMap<String, String> message) {
@@ -133,10 +131,8 @@ public class SimpleMessage implements IMessage {
 			return false;
 		}
 	}
-
-	@Override
+	
 	public int getIdentifier() {
 		return id;
 	}
-
 }

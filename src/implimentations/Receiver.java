@@ -4,7 +4,6 @@ import gui.Interface;
 import handlers.MessageHandler;
 import handlers.RsaKeyHandler;
 import handlers.FriendsHandler.Friend;
-import interfaces.IMessage;
 import interfaces.IReceiver;
 
 import java.io.BufferedReader;
@@ -22,10 +21,11 @@ import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 
 public class Receiver implements IReceiver {
 	private static final int CACHE_SIZE = 100;
-	private static final int PORT = 1099;
+	private static int port = 1099;
 	private static String peerListUrl = "http://vierware.com/test/peerlist.txt";
 	
 	private static Interface ui;
@@ -62,6 +62,13 @@ public class Receiver implements IReceiver {
 		// Remember the user interface for updating later //
 		ui = gui;
 		
+		if (args.length >= 2 && args[0].equals("-p")) {
+			port = Integer.valueOf(args[1]);
+			String[] newargs = new String[args.length - 2];
+			for (int i = 2; i < args.length; i++)
+				newargs[i - 2] = args[i];
+			args = newargs;
+		}
 		
 		System.out.println("DEBUG: Creating Server.");
 		
@@ -70,15 +77,15 @@ public class Receiver implements IReceiver {
 		instance = new Receiver(new MessageHandler(rkp.getPrivate()));
 		
 		try {
-			
 			// Create a stub of the server //
-			stub = (IReceiver) UnicastRemoteObject.exportObject(instance, PORT);
+			stub = (IReceiver) UnicastRemoteObject.exportObject(instance, port);
 			
 			// Get the RMI registry
 			Registry registry = null;
 			try {
-				registry = LocateRegistry.createRegistry(PORT);
+				registry = LocateRegistry.createRegistry(port);
 			} catch (RemoteException e) {
+				System.err.println("DEBUG: Could not create registry, trying to get instead.");
 				registry = LocateRegistry.getRegistry();
 			}
 			
@@ -96,7 +103,7 @@ public class Receiver implements IReceiver {
 				}
 				instance.connectTo(peers);
 			} else {
-				instance.connectTo(getPeerList(peerListUrl));	// Get list of newline-seperated IP's of other peers
+				//instance.connectTo(getPeerList(peerListUrl));	// Get list of newline-seperated IP's of other peers
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -105,7 +112,7 @@ public class Receiver implements IReceiver {
 	}
 	
 	public void sendMessage(String from, Friend friend, String message) {
-		IMessage m = SimpleMessage.createMessage(rkp.getPublic(), friend.name, from, message);
+		SimpleMessage m = SimpleMessage.createMessage(rkp.getPublic(), friend.name, from, message);
 		try {
 			stub.propagate(m);
 		} catch (RemoteException e) {
@@ -113,7 +120,7 @@ public class Receiver implements IReceiver {
 		}
 	}
 	
-	public Receiver(MessageHandler mh) {
+	private Receiver(MessageHandler mh) {
 		if (mh == null)
 			throw new InvalidParameterException("Message Handler cannot be null.");
 		
@@ -124,7 +131,7 @@ public class Receiver implements IReceiver {
 	}
 
 	@Override
-	public void propagate(IMessage message) throws RemoteException {
+	public void propagate(SimpleMessage message) throws RemoteException {
 		try {
 			// Check if message is in cache and has already been propagated before.
 			if (cache.contains(message.getIdentifier())) {
@@ -151,12 +158,13 @@ public class Receiver implements IReceiver {
 			
 			// Decrypt the message - it might be ours!
 			System.out.println("DEBUG: Just received a message; Decrypting.");
-			if (messageHandler.decrypt(message)) {
+			LinkedHashMap<String, String> map = messageHandler.decrypt(message);
+			if (map != null) {
 				// Message is to us //
-				ui.newMessage(message);
+				ui.newMessage(SimpleMessage.niceMessage(map));
 			}
 		} catch (Exception e) {
-			System.out.println("DEBUG: Decryption Failed: " + e.getMessage());
+			System.err.println("DEBUG: Decryption Failed: " + e.getMessage());
 		}
 	}
 	
@@ -170,7 +178,7 @@ public class Receiver implements IReceiver {
 			node.connect();
 			return true;
 		} catch (Exception e) {
-			System.out.println("DEBUG: Failed to connect to node at " + host);
+			System.err.println("DEBUG: Failed to connect to node at " + host + ": " + e.getMessage() + " - " + e.getCause());
 			return false;
 		}
 	}
@@ -199,7 +207,7 @@ public class Receiver implements IReceiver {
 			IReceiver node = (IReceiver) registry.lookup("Receiver");
 			peerList.add(node);
 			peerHostNames.add(client);
-			System.out.println("Node at " + client + " now part of peer list.");
+			System.out.println("DEBUG: Node at " + client + " now part of peer list.");
 			return true;
 		} catch (Exception e) {
 			return false;

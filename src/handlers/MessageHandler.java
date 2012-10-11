@@ -1,6 +1,6 @@
 package handlers;
 
-import interfaces.IMessage;
+import implimentations.SimpleMessage;
 
 import java.security.interfaces.RSAPrivateKey;
 import java.util.Iterator;
@@ -14,14 +14,11 @@ public class MessageHandler {
 		priv = key;
 	}
 	
-	public boolean decrypt(IMessage message) {
-		LinkedHashMap<String, String> map;
-		try {
-			map = message.getMap(priv);
-			System.out.println("DEBUG: Decryption process was successful.");
-		} catch (Exception e) {
-			System.out.println("DEBUG: Decryption failed: " + e.getMessage());
-			return false;
+	public LinkedHashMap<String, String> decrypt(SimpleMessage message) {
+		LinkedHashMap<String, String> map = message.getMap(priv);
+		if (map == null) {
+			System.err.println("DEBUG: Decryption Failed.");
+			return null;
 		}
 		
 		Iterator<Entry<String, String>> it = map.entrySet().iterator();
@@ -32,6 +29,6 @@ public class MessageHandler {
 			System.out.println("\t" + e.getKey() + " = " + e.getValue());
 		}
 		
-		return true;
+		return map;
 	}
 }
